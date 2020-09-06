@@ -1,6 +1,7 @@
 __copyright__ = "Copyright (c) 2020 Jina AI Limited. All rights reserved."
 __license__ = "Apache-2.0"
 
+import inspect
 import os
 import pickle
 import re
@@ -556,3 +557,21 @@ class BaseExecutor(metaclass=ExecutorType):
 
     def __str__(self):
         return self.__class__.__name__
+
+    def _store_attr(self, **attrs):
+        for n,v in attrs.items():
+            setattr(self, n, v)
+            self.__stored_args__[n] = v
+
+    def store_attr(self, names=None, but=[], **attrs):
+        """Store params named in comma-separated `names` from calling context into attrs in `self`
+        Taken from https://github.com/fastai/fastcore
+        """
+        fr = inspect.currentframe().f_back
+        args,varargs,keyw,locs = inspect.getargvalues(fr)
+        if self is None: self = locs[args[0]]
+        if not hasattr(self, '__stored_args__'): self.__stored_args__ = {}
+        if attrs: return self._store_attr(**attrs)
+
+        ns = re.split(', *', names) if names else args[1:]
+        self._store_attr(**{n:fr.f_locals[n] for n in ns if n not in but})
